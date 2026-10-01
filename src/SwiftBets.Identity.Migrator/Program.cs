@@ -29,16 +29,24 @@ if (configuration["Migrator:AppLogin"] is { Length: > 0 } appLogin)
 if (configuration["Migrator:ImportFromPlacement"] is { Length: > 0 } placement)
 {
     var imported = await ImportAsync(placement, connectionString, configuration["Migrator:Brand"] ?? "swiftbets");
-    await Console.Out.WriteLineAsync($"imported {imported.Users} users and {imported.Tokens} refresh tokens from placement");
+    await Console.Out.WriteLineAsync(imported is { } counts
+        ? $"imported {counts.Users} users and {counts.Tokens} refresh tokens from placement"
+        : "placement no longer holds accounts; nothing to import");
 }
 
 return 0;
 
-static async Task<(int Users, int Tokens)> ImportAsync(string placementConnectionString, string identityConnectionString, string brand)
+static async Task<(int Users, int Tokens)?> ImportAsync(string placementConnectionString, string identityConnectionString, string brand)
 {
     var sql = SqlResources.For<Program>();
     await using var placement = new SqlConnection(placementConnectionString);
     await using var identity = new SqlConnection(identityConnectionString);
+    // Placement drops its auth schema once the cut-over is done (D111); from then on the import is a no-op.
+    if (await placement.ExecuteScalarAsync<int?>("SELECT OBJECT_ID(N'auth.RefreshTokens')") is null)
+    {
+        return null;
+    }
+
     var users = (await placement.QueryAsync<(Guid UserId, string Username, string PasswordHash, string Roles, DateTimeOffset CreatedAt)>(
         "SELECT UserId, Username, PasswordHash, Roles, CreatedAt FROM auth.Users")).ToList();
     foreach (var user in users)

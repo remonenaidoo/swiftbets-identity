@@ -58,6 +58,15 @@ public sealed class MigratorTests(SqlServerFixture sql)
         user.Roles.ShouldBe(["Operator"]);
     }
 
+    [Fact]
+    public async Task Import_is_a_no_op_once_placement_has_dropped_its_auth_schema()
+    {
+        var placement = await sql.CreateDatabaseAsync("plc_" + Guid.NewGuid().ToString("N")[..10]);
+        var identity = await sql.CreateDatabaseAsync("idm_" + Guid.NewGuid().ToString("N")[..10]);
+
+        (await IdentityDatabase.MigrateAsync(identity, $"--Migrator:ImportFromPlacement={placement}")).ShouldBe(0);
+    }
+
     private static async Task<(Guid UserId, string RefreshToken)> PlacementWithOneUserAsync(string connectionString)
     {
         await using var connection = new SqlConnection(connectionString);
