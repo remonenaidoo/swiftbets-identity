@@ -14,17 +14,16 @@ namespace SwiftBets.Identity.Infrastructure.Messaging;
 /// </summary>
 public sealed partial class SmtpAccountMessenger(IOptions<AccountEmailOptions> options, IHostEnvironment environment, ILogger<SmtpAccountMessenger> logger) : IAccountMessenger
 {
-    public Task SendEmailVerificationAsync(string email, string token, CancellationToken cancellationToken) =>
+    public Task SendEmailVerificationAsync(Guid userId, string email, string token, CancellationToken cancellationToken) =>
         SendAsync(email, AccountEmails.Verification(Link("account/verify", token)), cancellationToken);
 
-    public Task SendPasswordResetAsync(string email, string token, CancellationToken cancellationToken) =>
+    public Task SendPasswordResetAsync(Guid userId, string email, string token, CancellationToken cancellationToken) =>
         SendAsync(email, AccountEmails.PasswordReset(Link("account/reset-password", token)), cancellationToken);
 
-    public Task SendAlreadyRegisteredAsync(string email, CancellationToken cancellationToken) =>
+    public Task SendAlreadyRegisteredAsync(Guid userId, string email, CancellationToken cancellationToken) =>
         SendAsync(email, AccountEmails.AlreadyRegistered(Link("account/sign-in", null), Link("account/forgot-password", null)), cancellationToken);
 
-    private string Link(string path, string? token) =>
-        $"{options.Value.PublicBaseUrl.TrimEnd('/')}/{path}" + (token is null ? string.Empty : $"?token={Uri.EscapeDataString(token)}");
+    private string Link(string path, string? token) => AccountLinks.Build(options.Value, path, token);
 
     private async Task SendAsync(string to, (string Subject, string Body) email, CancellationToken cancellationToken)
     {

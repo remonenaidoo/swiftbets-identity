@@ -1,12 +1,16 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
+using SwiftBets.BuildingBlocks.Outbox;
 using SwiftBets.BuildingBlocks.Persistence;
+using SwiftBets.Contracts.Messaging;
 using SwiftBets.Identity.Application.Ports;
 using SwiftBets.Identity.Domain;
+using SwiftBets.Identity.Infrastructure.Messaging;
 
 namespace SwiftBets.Identity.Infrastructure.Persistence;
 
-public sealed class SqlUserStore(ISqlConnectionFactory connections) : IUserStore
+/// <summary>Accounts in SQL Server. Each change other services care about commits together with its outbox event.</summary>
+public sealed class SqlUserStore(ISqlConnectionFactory connections, IOutbox outbox) : IUserStore
 {
     private static readonly SqlResources Sql = SqlResources.For<SqlUserStore>();
 
@@ -30,6 +34,7 @@ public sealed class SqlUserStore(ISqlConnectionFactory connections) : IUserStore
         {
             await connection.ExecuteAsync(Sql.Get("Users.Insert"), Parameters(user, now), transaction);
             await connection.ExecuteAsync(Sql.Get("Users.InsertRole"), user.Roles.Select(r => new { user.UserId, Role = r }), transaction);
+            await outbox.EnqueueAsync(transaction, Topics.UserRegistered, user.UserId.ToString(), IdentityEvents.Registered(user, now), CancellationToken.None);
             await transaction.CommitAsync();
             return true;
         }
@@ -61,15 +66,34 @@ public sealed class SqlUserStore(ISqlConnectionFactory connections) : IUserStore
 
     public async Task MarkEmailVerifiedAsync(Guid userId, DateTimeOffset now)
     {
-        await using var connection = await connections.OpenAsync(CancellationToken.None);
-        await connection.ExecuteAsync(Sql.Get("Users.MarkEmailVerified"), new { UserId = userId, Now = now });
+        await using var connection = (SqlConnection)await connections.OpenAsync(CancellationToken.None);
+        await using var transaction = connection.BeginTransaction();
+        if (await connection.ExecuteAsync(Sql.Get("Users.MarkEmailVerified"), new { UserId = userId, Now = now }, transaction) == 1)
+        {
+            await outbox.EnqueueAsync(transaction, Topics.EmailVerified, userId.ToString(), IdentityEvents.EmailVerified(userId, now), CancellationToken.None);
+        }
+
+        await transaction.CommitAsync();
     }
 
     public async Task<bool> ChangeStatusAsync(Guid userId, AccountStatus from, AccountStatus to, string reason, string changedBy, DateTimeOffset now)
     {
-        await using var connection = await connections.OpenAsync(CancellationToken.None);
-        return await connection.ExecuteScalarAsync<int>(Sql.Get("Users.ChangeStatus"),
-            new { UserId = userId, From = (byte)from, To = (byte)to, Reason = reason, ChangedBy = changedBy, Now = now }) == 1;
+        await using var connection = (SqlConnection)await connections.OpenAsync(CancellationToken.None);
+        await using var transaction = connection.BeginTransaction();
+        var changed = await connection.ExecuteScalarAsync<int>(Sql.Get("Users.ChangeStatus"),
+            new { UserId = userId, From = (byte)from, To = (byte)to, Reason = reason, ChangedBy = changedBy, Now = now }, transaction) == 1;
+        if (changed)
+        {
+            var key = userId.ToString();
+            await outbox.EnqueueAsync(transaction, Topics.AccountStatusChanged, key, IdentityEvents.StatusChanged(userId, from, to, reason, changedBy, now), CancellationToken.None);
+            if (to != AccountStatus.Active)
+            {
+                await outbox.EnqueueAsync(transaction, Topics.SessionRevoked, key, IdentityEvents.AllSessionsRevoked(userId, $"account {to}", now), CancellationToken.None);
+            }
+        }
+
+        await transaction.CommitAsync();
+        return changed;
     }
 
     public async Task<IReadOnlyList<string>> PermissionsForAsync(IReadOnlyList<string> roles, CancellationToken cancellationToken)

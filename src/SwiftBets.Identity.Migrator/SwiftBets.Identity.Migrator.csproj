@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SwiftBets.BuildingBlocks.Persistence" />
+    <PackageReference Include="SwiftBets.BuildingBlocks.Outbox" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
     <PackageReference Include="Dapper" />

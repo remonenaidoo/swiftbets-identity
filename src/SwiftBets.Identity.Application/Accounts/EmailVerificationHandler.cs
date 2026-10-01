@@ -28,7 +28,7 @@ public sealed class EmailVerificationHandler(IUserStore users, ITokenStore token
         {
             var token = SecretTokens.New();
             await tokens.StoreOneTimeTokenAsync(SecretTokens.Hash(token), user.UserId, TokenPurpose.VerifyEmail, time.GetUtcNow().AddHours(options.Value.VerifyEmailHours));
-            await messenger.SendEmailVerificationAsync(address, token, cancellationToken);
+            await messenger.SendEmailVerificationAsync(user.UserId, address, token, cancellationToken);
         }
 
         return Result.Success();
