@@ -4,6 +4,8 @@ using SwiftBets.BuildingBlocks.Core;
 using SwiftBets.BuildingBlocks.Messaging;
 using SwiftBets.BuildingBlocks.Outbox;
 using SwiftBets.BuildingBlocks.Persistence;
+using SwiftBets.Contracts.Compliance;
+using SwiftBets.Contracts.Messaging;
 using SwiftBets.Identity.Application;
 using SwiftBets.Identity.Application.Ports;
 using SwiftBets.Identity.Infrastructure.Messaging;
@@ -38,6 +40,10 @@ public static class InfrastructureRegistration
         services.AddSqlServerOutbox(configuration, runRelay: configuration.GetValue("Outbox:RunRelay", true));
         services.AddSingleton(TimeProvider.System);
         services.AddHostedService<DemoUserSeeder>();
+        if (configuration.GetValue("Compliance:ConsumeExclusions", true))
+        {
+            services.AddKafkaConsumer<SelfExclusionStartedV1, SelfExclusionStartedConsumer>(Topics.SelfExclusionStarted, "identity.exclusions");
+        }
         return services;
     }
 
