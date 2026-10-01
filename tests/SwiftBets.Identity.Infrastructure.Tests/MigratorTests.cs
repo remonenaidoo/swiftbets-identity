@@ -31,6 +31,8 @@ public sealed class MigratorTests(SqlServerFixture sql)
         (await IdentityDatabase.MigrateAsync(connectionString)).ShouldBe(0);
         await using var connection = new SqlConnection(connectionString);
 
+        await connection.ExecuteAsync(Rollback("0007_payments_permissions"));
+        (await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM accounts.RolePermissions")).ShouldBe(11);
         await connection.ExecuteAsync(Rollback("0006_compliance_write"));
         (await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM accounts.RolePermissions")).ShouldBe(9);
         await connection.ExecuteAsync(Rollback("0005_compliance_permissions"));
@@ -42,7 +44,7 @@ public sealed class MigratorTests(SqlServerFixture sql)
 
         (await IdentityDatabase.MigrateAsync(connectionString)).ShouldBe(0);
         (await TablesAsync(connectionString)).Count.ShouldBe(6);
-        (await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM accounts.RolePermissions")).ShouldBe(11);
+        (await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM accounts.RolePermissions")).ShouldBe(15);
     }
 
     [Fact]
