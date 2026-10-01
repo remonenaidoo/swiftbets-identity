@@ -43,6 +43,7 @@ public static class InfrastructureRegistration
         if (configuration.GetValue("Compliance:ConsumeExclusions", true))
         {
             services.AddKafkaConsumer<SelfExclusionStartedV1, SelfExclusionStartedConsumer>(Topics.SelfExclusionStarted, "identity.exclusions");
+            services.AddKafkaConsumer<RestrictionsChangedV1, RestrictionsChangedConsumer>(Topics.RestrictionsChanged, "identity.restrictions");
         }
         return services;
     }

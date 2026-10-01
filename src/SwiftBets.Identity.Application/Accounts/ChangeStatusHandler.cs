@@ -46,4 +46,19 @@ public sealed class ChangeStatusHandler(IUserStore users, ITokenStore tokens, Ti
 
         return Result.Success();
     }
+
+    /// <summary>
+    /// Reopens an account compliance self-excluded once compliance says no exclusion is active. An exclusion an operator
+    /// set here, or any later status change, is left alone.
+    /// </summary>
+    public async Task<bool> EndComplianceExclusionAsync(Guid userId, string complianceActor, CancellationToken cancellationToken)
+    {
+        if (await users.FindByIdAsync(userId, cancellationToken) is not { Status: AccountStatus.SelfExcluded }
+            || await users.LastStatusChangedByAsync(userId, cancellationToken) != complianceActor)
+        {
+            return false;
+        }
+
+        return await users.ChangeStatusAsync(userId, AccountStatus.SelfExcluded, AccountStatus.Active, "exclusion period ended", complianceActor, time.GetUtcNow());
+    }
 }
