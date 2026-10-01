@@ -106,7 +106,7 @@ public sealed class SignInTests(SqlServerFixture sql)
         var staff = Claims((await db.Sessions.PasswordAsync("ops1", Password, CancellationToken.None)).Value.AccessToken);
         var customer = Claims((await db.Sessions.PasswordAsync("p@example.com", Password, CancellationToken.None)).Value.AccessToken);
 
-        staff.Where(c => c.Type == "perm").Select(c => c.Value).ShouldBe([Permissions.UsersRead, Permissions.UsersStatusWrite, "compliance.read", "compliance.audit.read"], ignoreOrder: true);
+        staff.Where(c => c.Type == "perm").Select(c => c.Value).ShouldBe([Permissions.UsersRead, Permissions.UsersStatusWrite, "compliance.read", "compliance.audit.read", "compliance.write"], ignoreOrder: true);
         staff.Where(c => c.Type == "role").Select(c => c.Value).ShouldBe(["Operator", "Ops"], ignoreOrder: true);
         customer.ShouldNotContain(c => c.Type == "perm");
         customer.Single(c => c.Type == "sub").Value.ShouldBe(customerId.ToString());
