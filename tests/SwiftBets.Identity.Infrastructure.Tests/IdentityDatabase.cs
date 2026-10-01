@@ -2,6 +2,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
+using SwiftBets.BuildingBlocks.Messaging;
+using SwiftBets.BuildingBlocks.Outbox;
 using SwiftBets.BuildingBlocks.Persistence;
 using SwiftBets.BuildingBlocks.Testing;
 using SwiftBets.Identity.Application;
@@ -19,7 +21,7 @@ public sealed class IdentityDatabase
     {
         ConnectionString = connectionString;
         var connections = new SqlServerConnectionFactory(connectionString);
-        Users = new SqlUserStore(connections);
+        Users = new SqlUserStore(connections, new SqlServerOutbox(Options.Create(new KafkaOptions { BootstrapServers = "unused:9092", Environment = "test", ClientId = "identity-tests" }), Time));
         Tokens = new SqlTokenStore(connections);
         var options = Options.Create(Settings);
         Issuer = new RsaTokenIssuer(options, new DevelopmentHost(), Time, NullLogger<RsaTokenIssuer>.Instance);

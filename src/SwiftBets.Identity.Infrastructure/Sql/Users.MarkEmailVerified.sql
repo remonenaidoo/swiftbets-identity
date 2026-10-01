@@ -1,1 +1,1 @@
-UPDATE accounts.Users SET EmailVerifiedAt = COALESCE(EmailVerifiedAt, @Now), UpdatedAt = @Now WHERE UserId = @UserId;
+UPDATE accounts.Users SET EmailVerifiedAt = @Now, UpdatedAt = @Now WHERE UserId = @UserId AND EmailVerifiedAt IS NULL;

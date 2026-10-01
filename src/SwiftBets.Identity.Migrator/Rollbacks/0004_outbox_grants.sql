@@ -1,0 +1,1 @@
+REVOKE SELECT, INSERT, UPDATE, DELETE ON SCHEMA::outbox FROM swiftbets_app;

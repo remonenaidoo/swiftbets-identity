@@ -45,13 +45,14 @@ public sealed class RegisterHandler(IUserStore users, ITokenStore tokens, IPassw
             command.Country, command.Currency, AccountStatus.Active, null, 0, null, null, [RoleNames.Customer]);
         if (!await users.CreateAsync(user, now))
         {
-            await messenger.SendAlreadyRegisteredAsync(email, cancellationToken);
+            var existing = await users.FindByLoginAsync(email, cancellationToken);
+            await messenger.SendAlreadyRegisteredAsync(existing?.UserId ?? Guid.Empty, email, cancellationToken);
             return Result.Success();
         }
 
         var token = SecretTokens.New();
         await tokens.StoreOneTimeTokenAsync(SecretTokens.Hash(token), user.UserId, TokenPurpose.VerifyEmail, now.AddHours(options.Value.VerifyEmailHours));
-        await messenger.SendEmailVerificationAsync(email, token, cancellationToken);
+        await messenger.SendEmailVerificationAsync(user.UserId, email, token, cancellationToken);
         return Result.Success();
     }
 }

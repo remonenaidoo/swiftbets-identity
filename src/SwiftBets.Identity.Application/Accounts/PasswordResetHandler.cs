@@ -17,7 +17,7 @@ public sealed class PasswordResetHandler(IUserStore users, ITokenStore tokens, I
         {
             var token = SecretTokens.New();
             await tokens.StoreOneTimeTokenAsync(SecretTokens.Hash(token), user.UserId, TokenPurpose.ResetPassword, time.GetUtcNow().AddMinutes(options.Value.ResetPasswordMinutes));
-            await messenger.SendPasswordResetAsync(address, token, cancellationToken);
+            await messenger.SendPasswordResetAsync(user.UserId, address, token, cancellationToken);
         }
 
         return Result.Success();

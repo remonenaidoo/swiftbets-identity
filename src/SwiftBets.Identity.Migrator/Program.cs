@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using SwiftBets.BuildingBlocks.Outbox;
 using SwiftBets.BuildingBlocks.Persistence;
 
 var configuration = new ConfigurationBuilder().AddEnvironmentVariables().AddCommandLine(args).Build();
@@ -12,7 +13,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 var source = new MigrationSource(typeof(Program).Assembly, 1);
-var result = MigrationRunner.RunSqlServer(connectionString, configuration.GetValue("Migrator:EnsureDatabase", false), source);
+var result = MigrationRunner.RunSqlServer(connectionString, configuration.GetValue("Migrator:EnsureDatabase", false), OutboxRegistration.Migrations, source);
 if (!result.Successful)
 {
     await Console.Error.WriteLineAsync(result.Error.ToString());
