@@ -24,6 +24,9 @@ public interface IUserStore
     /// <summary>Moves the account to a new status only if it is still in <paramref name="from"/>, recording who and why.</summary>
     Task<bool> ChangeStatusAsync(Guid userId, AccountStatus from, AccountStatus to, string reason, string changedBy, DateTimeOffset now);
 
+    /// <summary>Who made the account's latest status change, or null when it never changed.</summary>
+    Task<string?> LastStatusChangedByAsync(Guid userId, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<string>> PermissionsForAsync(IReadOnlyList<string> roles, CancellationToken cancellationToken);
 
     Task UpsertSeedUserAsync(User user, DateTimeOffset now);

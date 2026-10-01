@@ -96,6 +96,12 @@ public sealed class SqlUserStore(ISqlConnectionFactory connections, IOutbox outb
         return changed;
     }
 
+    public async Task<string?> LastStatusChangedByAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        await using var connection = await connections.OpenAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<string>(new CommandDefinition(Sql.Get("Users.LastStatusChangedBy"), new { UserId = userId }, cancellationToken: cancellationToken));
+    }
+
     public async Task<IReadOnlyList<string>> PermissionsForAsync(IReadOnlyList<string> roles, CancellationToken cancellationToken)
     {
         await using var connection = await connections.OpenAsync(cancellationToken);
