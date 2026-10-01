@@ -19,7 +19,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IsPackable>false</IsPackable>
-    <RepositoryUrl>https://github.com/remonenaidoo/swiftbets-placement</RepositoryUrl>
+    <RepositoryUrl>https://github.com/remonenaidoo/swiftbets-identity</RepositoryUrl>
   </PropertyGroup>
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <NoWarn>$(NoWarn);CA1707;CA2201;CA1861</NoWarn>
