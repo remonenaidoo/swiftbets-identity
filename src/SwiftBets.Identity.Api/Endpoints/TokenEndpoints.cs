@@ -35,6 +35,9 @@ public static class TokenEndpoints
         endpoints.MapPost("/auth/refresh", async (RefreshRequest request, TokenHandler tokens, HttpContext context, CancellationToken cancellationToken) =>
             (await tokens.RefreshAsync(request.RefreshToken, cancellationToken)).ToHttpResult(context));
 
+        endpoints.MapPost("/auth/handoff", async (RefreshRequest request, TokenHandler tokens, HttpContext context, CancellationToken cancellationToken) =>
+            (await tokens.HandoffAsync(request.RefreshToken, cancellationToken)).ToHttpResult(context));
+
         endpoints.MapPost("/auth/revoke", async (RefreshRequest request, TokenHandler tokens) =>
         {
             await tokens.RevokeAsync(request.RefreshToken);

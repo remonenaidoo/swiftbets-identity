@@ -67,6 +67,24 @@ public sealed class TokenHandler(IUserStore users, ITokenStore tokens, ITokenIss
 
     public async Task<Result<TokenResponse>> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
+        var rotated = await RotateAsync(refreshToken, cancellationToken);
+        return rotated.IsFailure ? rotated.Error! : Result.Success(rotated.Value.Tokens);
+    }
+
+    /// <summary>
+    /// Hands an app's sign-in to a browser it opens: rotates the app's own refresh token as a refresh would, and issues
+    /// the browser a separate device, so signing either one out leaves the other signed in.
+    /// </summary>
+    public async Task<Result<HandoffResponse>> HandoffAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        var rotated = await RotateAsync(refreshToken, cancellationToken);
+        return rotated.IsFailure
+            ? rotated.Error!
+            : Result.Success(new HandoffResponse(rotated.Value.Tokens, await IssueAsync(rotated.Value.User, Guid.CreateVersion7(), cancellationToken)));
+    }
+
+    private async Task<Result<(User User, TokenResponse Tokens)>> RotateAsync(string refreshToken, CancellationToken cancellationToken)
+    {
         var now = time.GetUtcNow();
         var hash = SecretTokens.Hash(refreshToken);
         var (outcome, userId, familyId) = await tokens.ConsumeRefreshTokenAsync(hash, now);
@@ -82,7 +100,7 @@ public sealed class TokenHandler(IUserStore users, ITokenStore tokens, ITokenIss
             return new Error("invalid_refresh_token", "Sign in again.", ErrorKind.Unauthorized);
         }
 
-        return Result.Success(await IssueAsync(user, familyId, cancellationToken));
+        return Result.Success((user, await IssueAsync(user, familyId, cancellationToken)));
     }
 
     /// <summary>Signs a device out: its refresh token and every token rotated from it stop working.</summary>
