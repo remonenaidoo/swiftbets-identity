@@ -45,6 +45,7 @@ public sealed class IdentityHost : WebApplicationFactory<Program>
         builder.UseSetting("Kafka:Environment", "test");
         builder.UseSetting("Kafka:ClientId", "identity-tests");
         builder.UseSetting("Outbox:RunRelay", "false");
+        builder.UseSetting("Identity:Clients:notifications", "notifications-test-secret");
         builder.ConfigureTestServices(services => services.AddSingleton<IAccountMessenger>(Emails));
     }
 
