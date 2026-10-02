@@ -53,6 +53,28 @@ public sealed class SignInTests(SqlServerFixture sql)
     }
 
     [Fact]
+    public async Task A_handoff_gives_the_browser_its_own_sign_in_and_keeps_the_app_signed_in()
+    {
+        var (db, _) = await RegisteredAsync();
+        var app = (await db.Sessions.PasswordAsync("p@example.com", Password, CancellationToken.None)).Value;
+
+        var handoff = (await db.Sessions.HandoffAsync(app.RefreshToken!, CancellationToken.None)).Value;
+        await db.Sessions.RevokeAsync(handoff.Browser.RefreshToken!);
+
+        (await db.Sessions.RefreshAsync(handoff.Device.RefreshToken!, CancellationToken.None)).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_spent_refresh_token_cannot_be_handed_off()
+    {
+        var (db, _) = await RegisteredAsync();
+        var app = (await db.Sessions.PasswordAsync("p@example.com", Password, CancellationToken.None)).Value;
+        (await db.Sessions.RefreshAsync(app.RefreshToken!, CancellationToken.None)).IsSuccess.ShouldBeTrue();
+
+        (await db.Sessions.HandoffAsync(app.RefreshToken!, CancellationToken.None)).Error!.Code.ShouldBe("refresh_token_reused");
+    }
+
+    [Fact]
     public async Task Signing_a_device_out_leaves_the_other_devices_signed_in()
     {
         var (db, _) = await RegisteredAsync();
