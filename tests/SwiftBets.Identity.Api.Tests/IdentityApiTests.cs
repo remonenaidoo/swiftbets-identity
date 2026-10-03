@@ -69,6 +69,23 @@ public sealed class IdentityApiTests(SqlServerFixture sql)
     }
 
     [Fact]
+    public async Task A_service_looks_up_where_to_write_to_a_customer_and_a_customer_cannot()
+    {
+        await using var host = await IdentityHost.StartAsync(sql);
+        var client = host.CreateClient();
+        var punterToken = await SignInAsync(client, "punter1", IdentityHost.DemoPassword);
+        var punterId = (await (await GetAsync(client, "/profile", punterToken)).Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("userId").GetString();
+        using var grant = await client.PostAsJsonAsync("/auth/token", new { grantType = "client_credentials", clientId = "notifications", clientSecret = "notifications-test-secret" }, Cancel);
+        var serviceToken = (await grant.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("accessToken").GetString()!;
+
+        using var contact = await GetAsync(client, $"/internal/users/{punterId}/contact", serviceToken);
+        using var refused = await GetAsync(client, $"/internal/users/{punterId}/contact", punterToken);
+
+        (await contact.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("email").GetString()!.ShouldContain("@");
+        refused.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Password_reset_and_resend_requests_always_answer_accepted()
     {
         await using var host = await IdentityHost.StartAsync(sql);

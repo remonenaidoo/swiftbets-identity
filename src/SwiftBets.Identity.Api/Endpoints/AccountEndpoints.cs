@@ -46,6 +46,13 @@ public static class AccountEndpoints
                 : Error.NotFound("user_not_found", "No such account.").ToHttpResult(context))
             .RequireAuthorization();
 
+        // Services that write to a customer (notifications) look the address up here, so it never travels on Kafka.
+        endpoints.MapGet("/internal/users/{userId:guid}/contact", async (Guid userId, IUserStore users, HttpContext context, CancellationToken cancellationToken) =>
+            await users.FindByIdAsync(userId, cancellationToken) is { } user
+                ? Results.Ok(new { user.UserId, user.Email, emailVerified = user.EmailVerifiedAt is not null, status = user.Status.ToString() })
+                : Error.NotFound("user_not_found", "No such account.").ToHttpResult(context))
+            .RequireAuthorization(Roles.Service);
+
         var admin = endpoints.MapGroup("/admin/users");
 
         admin.MapGet("/", async (string? email, IUserStore users, HttpContext context, CancellationToken cancellationToken) =>
