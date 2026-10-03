@@ -31,7 +31,9 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 });
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Permissions.UsersRead, p => p.RequireClaim("perm", Permissions.UsersRead))
-    .AddPolicy(Permissions.UsersStatusWrite, p => p.RequireClaim("perm", Permissions.UsersStatusWrite));
+    .AddPolicy(Permissions.UsersStatusWrite, p => p.RequireClaim("perm", Permissions.UsersStatusWrite))
+    .AddPolicy(Permissions.RolesRead, p => p.RequireClaim("perm", Permissions.RolesRead))
+    .AddPolicy(Permissions.RolesWrite, p => p.RequireClaim("perm", Permissions.RolesWrite));
 builder.Services.AddScoped<IValidator<AccountEndpoints.RegisterRequest>, AccountEndpoints.RegisterRequestValidator>();
 builder.Services.AddIdentityApplication();
 builder.Services.AddIdentityInfrastructure(builder.Configuration);

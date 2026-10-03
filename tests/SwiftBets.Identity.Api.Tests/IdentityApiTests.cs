@@ -86,6 +86,37 @@ public sealed class IdentityApiTests(SqlServerFixture sql)
     }
 
     [Fact]
+    public async Task An_admin_gives_traders_a_permission_that_their_next_sign_in_carries()
+    {
+        await using var host = await IdentityHost.StartAsync(sql);
+        var client = host.CreateClient();
+        var adminToken = await SignInAsync(client, "admin1", IdentityHost.DemoPassword);
+
+        using var grant = new HttpRequestMessage(HttpMethod.Put, "/admin/roles/Trader/permissions/reports.read") { Content = JsonContent.Create(new { granted = true }) };
+        grant.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        (await client.SendAsync(grant, Cancel)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var traderToken = new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(await SignInAsync(client, "trader1", IdentityHost.DemoPassword));
+        traderToken.Claims.Where(c => c.Type == "perm").Select(c => c.Value).ShouldContain("reports.read");
+    }
+
+    [Fact]
+    public async Task A_trader_cannot_reach_role_management_and_admin_cannot_lose_it()
+    {
+        await using var host = await IdentityHost.StartAsync(sql);
+        var client = host.CreateClient();
+        var traderToken = await SignInAsync(client, "trader1", IdentityHost.DemoPassword);
+        var adminToken = await SignInAsync(client, "admin1", IdentityHost.DemoPassword);
+
+        using var refused = await GetAsync(client, "/admin/roles", traderToken);
+        using var lockout = new HttpRequestMessage(HttpMethod.Put, "/admin/roles/Admin/permissions/identity.roles.write") { Content = JsonContent.Create(new { granted = false }) };
+        lockout.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await client.SendAsync(lockout, Cancel)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Password_reset_and_resend_requests_always_answer_accepted()
     {
         await using var host = await IdentityHost.StartAsync(sql);

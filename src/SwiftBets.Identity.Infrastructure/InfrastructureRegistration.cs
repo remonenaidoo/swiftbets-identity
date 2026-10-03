@@ -22,6 +22,7 @@ public static class InfrastructureRegistration
         services.AddValidatedOptions<IdentityOptions>(configuration, IdentityOptions.SectionName);
         services.AddValidatedOptions<AccountEmailOptions>(configuration, AccountEmailOptions.SectionName);
         services.AddSingleton<IUserStore, SqlUserStore>();
+        services.AddSingleton<IRoleStore, SqlRoleStore>();
         services.AddSingleton<ITokenStore, SqlTokenStore>();
         services.AddSingleton<RsaTokenIssuer>();
         services.AddSingleton<ITokenIssuer>(sp => sp.GetRequiredService<RsaTokenIssuer>());

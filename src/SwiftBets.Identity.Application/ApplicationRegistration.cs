@@ -9,6 +9,7 @@ public static class ApplicationRegistration
     public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
     {
         services.AddScoped<RegisterHandler>();
+        services.AddScoped<Roles.RoleHandler>();
         services.AddScoped<EmailVerificationHandler>();
         services.AddScoped<PasswordResetHandler>();
         services.AddScoped<ChangeStatusHandler>();
