@@ -1,3 +1,4 @@
+using SwiftBets.Identity.Application.Roles;
 using FluentValidation;
 using SwiftBets.BuildingBlocks.Web;
 using SwiftBets.Contracts.Errors;
@@ -53,6 +54,35 @@ public static class AccountEndpoints
                 : Error.NotFound("user_not_found", "No such account.").ToHttpResult(context))
             .RequireAuthorization(Roles.Service);
 
+        var roles = endpoints.MapGroup("/admin/roles");
+
+        roles.MapGet("/", async (IRoleStore store, CancellationToken cancellationToken) =>
+        {
+            var granted = await store.PermissionsByRoleAsync(cancellationToken);
+            return Results.Ok(new
+            {
+                roles = RoleNames.StaffRoles.Select(r => new { role = r, permissions = granted.GetValueOrDefault(r) ?? [] }),
+                permissions = Permissions.Catalogue.Select(p => new { name = p.Name, allows = p.Allows }),
+            });
+        }).RequireAuthorization(Permissions.RolesRead);
+
+        roles.MapPut("/{role}/permissions/{permission}", async (string role, string permission, GrantBody body, RoleHandler handler, HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var result = await handler.SetPermissionAsync(role, permission, body.Granted, cancellationToken);
+            return result.IsFailure ? result.ToHttpResult(context) : Results.NoContent();
+        }).RequireAuthorization(Permissions.RolesWrite);
+
+        endpoints.MapGet("/admin/users/{userId:guid}/roles", async (Guid userId, IRoleStore store, CancellationToken cancellationToken) =>
+            Results.Ok(await store.UserRolesAsync(userId, cancellationToken)))
+            .RequireAuthorization(Permissions.RolesRead);
+
+        endpoints.MapPut("/admin/users/{userId:guid}/roles", async (Guid userId, RolesBody body, RoleHandler handler, HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var changedBy = Guid.TryParse(context.User.FindFirst("sub")?.Value, out var id) ? id : Guid.Empty;
+            var result = await handler.SetUserRolesAsync(userId, body.Roles ?? [], changedBy, cancellationToken);
+            return result.IsFailure ? result.ToHttpResult(context) : Results.NoContent();
+        }).RequireAuthorization(Permissions.RolesWrite);
+
         var admin = endpoints.MapGroup("/admin/users");
 
         admin.MapGet("/", async (string? email, IUserStore users, HttpContext context, CancellationToken cancellationToken) =>
@@ -96,6 +126,10 @@ public static class AccountEndpoints
     public sealed record ResetBody(string Token, string Password);
 
     public sealed record StatusBody(string Status, string Reason);
+
+    public sealed record GrantBody(bool Granted);
+
+    public sealed record RolesBody(IReadOnlyList<string>? Roles);
 
     /// <summary>What an account looks like to its owner and to staff. Never includes the password hash.</summary>
     public sealed record Profile(Guid UserId, string? Email, string? Username, bool EmailVerified, string Status, string Brand, string Country, string Currency, IReadOnlyList<string> Roles)

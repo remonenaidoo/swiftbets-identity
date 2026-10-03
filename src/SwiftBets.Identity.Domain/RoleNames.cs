@@ -20,6 +20,9 @@ public static class RoleNames
 
     public static bool IsStaff(string role) => role is Trader or Ops or Admin;
 
+    /// <summary>Roles a staff member can be given from the console.</summary>
+    public static readonly IReadOnlyList<string> StaffRoles = [Trader, Ops, Admin];
+
     /// <summary>The role claims a token carries for these roles, legacy names included.</summary>
     public static IReadOnlyList<string> Claims(IEnumerable<string> roles)
     {

@@ -19,6 +19,7 @@ public sealed class DemoUserSeeder(IServiceScopeFactory scopes, IOptions<Identit
         (Guid.Parse("10000000-0000-0000-0000-000000000005"), "punter5", RoleNames.Customer),
         (Guid.Parse("20000000-0000-0000-0000-000000000001"), "operator1", RoleNames.Ops),
         (Guid.Parse("30000000-0000-0000-0000-000000000001"), "admin1", RoleNames.Admin),
+        (Guid.Parse("40000000-0000-0000-0000-000000000001"), "trader1", RoleNames.Trader),
     ];
 
     public async Task StartAsync(CancellationToken cancellationToken)
